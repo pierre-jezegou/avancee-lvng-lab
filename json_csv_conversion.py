@@ -33,6 +33,13 @@ def JSON_CSV_CONVERTER(json_path:str) -> None:
             add_condition(evenement)
         elif evenement["resourceType"]=="AllergyIntolerance":
             add_allergy(evenement)
+        elif evenement["resourceType"]=="Encounter":
+            add_encounter(evenement)
+        elif evenement["resourceType"]=="MedicationRequest":
+            add_prescription(evenement)
+        elif evenement["resourceType"]=="Observation":
+            add_observation(evenement)
+            
     return None
 
 def ouverture_fichier(filename:str, path:str =PATH, mode:str="a"):
@@ -95,5 +102,74 @@ def add_allergy(evenement:dict, IA_mode=False)->None:
 
 
 
+def add_encounter(evenement:dict, IA_mode=False)->None:
+    ''' Ajout d'une allergie au fichier 'visites.csv' '''
+    fichier = ouverture_fichier("visites.csv")
+    id = evenement["id"][1:]
+    ipp = evenement["subject"]["reference"].replace("Patient/i", '')
+    start = evenement["period"]["start"]
+    if evenement["period"].get("end"):
+        end = evenement["period"]["end"]
+    else:
+        end = ""
+    status = evenement["status"]
+    service_id = evenement["location"]["location"]["reference"][-6:]
+    
+
+    if not(IA_mode):
+        fichier.write(id +SEP+ ipp +SEP+ start +SEP+ end +SEP+ status +SEP+ service_id+"\r")
+    fichier.close()
+    return None
 
 
+
+def add_prescription(evenement:dict, IA_mode=False) -> None:
+    ''' Ajout d'une allergie au fichier 'prescriptions.csv' '''
+    fichier = ouverture_fichier("prescriptions.csv")
+    id = evenement["id"][1:]
+    date = evenement["dosageInstruction"][0]["timing"]["repeat"]["boundsPeriod"]["start"]
+    ipp = evenement["subject"]["reference"].replace("Patient/i", '')
+    iep = evenement["encounter"]["reference"].replace("Encounter/i", '')
+    medicament = evenement["medicationReference"]["reference"].replace("Medication/i", '')
+    amount = evenement["dosageInstruction"][0]["doseAndRate"][0]["doseQuantity"]["value"]
+    unit = evenement["dosageInstruction"][0]["doseAndRate"][0]["doseQuantity"]["unit"]
+    frequence = evenement["dosageInstruction"][0]["text"]
+    si_besoin = evenement["dosageInstruction"][0]["asNeededCodeableConcept"]["text"]
+    commentaire = ""
+    status = evenement["status"]
+    ip = ""
+    appel = ""
+
+    if not(IA_mode):
+        fichier.write(id +SEP+ date +SEP+ ipp +SEP+ iep +SEP+ medicament +SEP+ amount +SEP+ unit +SEP+ frequence +SEP+ si_besoin +SEP+ commentaire +SEP+ status +SEP+ ip +SEP+ appel+"\r")
+    fichier.close()
+    return None
+
+
+def add_observation(evenement:dict, IA_mode=False) -> None:
+    ''' Ajout d'une allergie au fichier 'obs_num.csv' '''
+    
+    observation_type = evenement["code"]["coding"][0]["code"]
+    if observation_type == "Commentaire IDE":
+        fichier = ouverture_fichier("obs_text.csv")
+        ipp = evenement["subject"]["reference"].replace("Patient/i", '')
+        date = evenement["effectiveDateTime"]
+        category = evenement["category"][0]["coding"][0]["code"]
+        code = observation_type
+        value = evenement["valueString"]
+        line = ipp +SEP+ date +SEP+ category +SEP+ code +SEP+ value +"\r"
+    else:
+        fichier = ouverture_fichier("obs_num.csv")
+        ipp = evenement["subject"]["reference"].replace("Patient/i", '')
+        date = evenement["effectiveDateTime"]
+        category = evenement["category"][0]["coding"][0]["code"]
+        display = evenement["code"]["coding"][0]["display"]
+        value = evenement["valueQuantity"]["value"]
+        unit = evenement["valueQuantity"]["unit"]
+        out_of_range = evenement["code"]["coding"][0]["system"]
+        ref_range = evenement["referenceRange"][0]["text"]
+        line = ipp +SEP+ date +SEP+ category +SEP+ display +SEP+ value +SEP+ unit +SEP+ out_of_range +SEP+ ref_range +"\r"
+    if not(IA_mode):
+        fichier.write(line)
+    fichier.close()
+    return None
