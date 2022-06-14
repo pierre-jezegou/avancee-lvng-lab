@@ -37,7 +37,7 @@ def JSON_CSV_CONVERTER(json_path:str) -> None:
     print("Début de la conversion")
     with open(json_path, "r") as fichier:
         all_data = json.load(fichier)
-        print("\tFichier ouvert")
+        print("\tFichier JSON ouvert")
     # taille_json = len(all_data["entry"])
     for evenement in all_data["entry"]:
         evenement = evenement["resource"]
