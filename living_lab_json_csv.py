@@ -1,22 +1,34 @@
 import json
 import os
-from sympy import classify_pde
-from tqdm import tqdm
+import hashlib
+from datetime import datetime
 
-PATH="./"
+PATH="./CSV/"
 SEP = ", "
+IA_MODE = True
 
 
 fichiers = ["patients", "conditions", "allergies", "visites", "prescriptions", "obs_num", "obs_text", "ref_medications"]
+
+genres = {
+    "female":1,
+    "male":0
+    }
+
 
 
 def INITIALISATION() -> None:
     print("Nettoyage de l'espace de travail...")
     for fichier in fichiers:
-        if os.path.exists(fichier+".csv"):
-            os.remove(fichier+".csv")
+        if os.path.exists(PATH + fichier+".csv"):
+            os.remove(PATH + fichier+".csv")
     print("\tFichiers supprimés\n")
 
+
+def age(date: int) -> int:
+    "calcul de l'age avec pour entrée la date de naissance. Par défault, age à la date du jour"
+    age = 0
+    return age
 
 
 
@@ -35,7 +47,7 @@ def JSON_CSV_CONVERTER(json_path:str) -> None:
             elif evenement["resourceType"]=="Condition":
                 __add_condition(evenement)
             elif evenement["resourceType"]=="AllergyIntolerance":
-                __add_allergy(evenement)
+                __add_allergy(evenement) 
             elif evenement["resourceType"]=="Encounter":
                 __add_encounter(evenement)
             elif evenement["resourceType"]=="MedicationRequest":
@@ -62,7 +74,7 @@ def ouverture_fichier(filename:str, path:str =PATH, mode:str="a"):
 
 
 
-def __add_patient(evenement:dict, IA_mode=False)->None:
+def __add_patient(evenement:dict, IA_mode=IA_MODE)->None:
     ''' Ajout d'un patient au fichier 'patients.csv' '''
     fichier = ouverture_fichier("patients.csv")
     id = evenement["identifier"][0]["value"]
@@ -70,9 +82,15 @@ def __add_patient(evenement:dict, IA_mode=False)->None:
     name = evenement["name"][0]["given"][0].lower()
     gender = evenement["gender"]
     birthDate = evenement["birthDate"]
-
+    # revoir cette commande pour deal avec les mois/jours
+    age = str(int(datetime.now().strftime("%Y")) - int(datetime(int(birthDate[:4]), int(birthDate[5:7]), int(birthDate[8:10]), 0,0,0).strftime("%Y")))
+    
     if not(IA_mode):
-        fichier.write(id +SEP+ family +SEP+ name +SEP+ gender +SEP+ birthDate+"\r")
+        fichier.write(id +SEP+ name +SEP+ family +SEP+ gender +SEP+ birthDate+"\r")
+    else:
+        fichier.write(id[3:] +SEP+\
+            str(hashlib.md5((name+family).encode('utf-8')).hexdigest())\
+            +SEP+ str(genres[gender]) +SEP+ age +"\r")
     fichier.close()
     return None
 
@@ -93,7 +111,6 @@ def __add_condition(evenement:dict, IA_mode=False)->None:
         fichier.write(id +SEP+ patient +SEP+ system +SEP+ code +SEP+ display+"\r")
     fichier.close()
     return None
-
 
 
 
@@ -196,3 +213,10 @@ def __add_medication(evenement:dict, IA_mode=False):
     display = evenement["code"]["coding"][0]["display"].replace(',', '.')
     fichier.write(code +SEP+ display +"\r")
     fichier.close()
+
+
+def __add_patient_informations(evenement: dict, IA_MODE=False) -> None:
+    '''Ajout des éléments comme la taille et le poids au dossier patient'''
+    fichier_patients = ouverture_fichier("observations.csv")
+    ipp = evenement["subject"]["reference"][8:]
+    return None
